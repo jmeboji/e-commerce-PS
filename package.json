@@ -1,0 +1,22 @@
+{
+  "name": "e-commerce-PS",
+  "version": "1.0.0",
+  "description": "E-commerce platform monorepo (apps, services, shared packages)",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f postgres",
+    "docker:reset": "docker compose down -v"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20.12.0"
+  }
+}
