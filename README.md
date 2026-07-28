@@ -63,3 +63,8 @@ pnpm dev               # start with live reload
 | `pnpm docker:reset` | Stops local infra and wipes its data volume          |
 
 Each app/service/package that implements a script (build/test/typecheck/dev) defines it in its own `package.json`; `pnpm -r` skips workspace members that don't define it.
+
+## Contributing
+
+- Use the pull request template in [.github/pull_request_template.md](.github/pull_request_template.md) when opening a PR.
+- Record architectural decisions in [adr/README.md](adr/README.md) and add new ADRs under [adr](adr).
