@@ -4,6 +4,7 @@ set -e
 # Add one entry per service as it gets its own database.
 DATABASES=(
   "users_db"
+  "products_db"
 )
 
 for db in "${DATABASES[@]}"; do
