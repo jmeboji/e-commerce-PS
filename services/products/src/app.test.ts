@@ -58,6 +58,7 @@ describe("CRUD happy path", () => {
     expect(res.body).toMatchObject({
       name: payload.name,
       description: payload.description,
+      price: String(payload.price),
       sku: payload.sku,
       stock: payload.stock,
     });
@@ -79,5 +80,32 @@ describe("CRUD happy path", () => {
       name: payload.name,
       sku: payload.sku,
     });
+  });
+
+  it("updates the product", async () => {
+    const res = await request(app).patch(`/products/${createdId}`).send({ stock: 42 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: createdId,
+      stock: 42,
+    });
+  });
+
+  it("returns 404 when updating an unknown id", async () => {
+    const res = await request(app).patch(`/products/${randomUUID()}`).send({ stock: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when deleting an unknown id", async () => {
+    const res = await request(app).delete(`/products/${randomUUID()}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("deletes the product", async () => {
+    const deleteRes = await request(app).delete(`/products/${createdId}`);
+    expect(deleteRes.status).toBe(204);
+
+    const getRes = await request(app).get(`/products/${createdId}`);
+    expect(getRes.status).toBe(404);
   });
 });
