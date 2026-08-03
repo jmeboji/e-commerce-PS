@@ -5,6 +5,7 @@ set -e
 DATABASES=(
   "users_db"
   "products_db"
+  "cart_db"
 )
 
 for db in "${DATABASES[@]}"; do
