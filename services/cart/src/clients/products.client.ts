@@ -1,4 +1,4 @@
-const PRODUCTS_SERVICE_URL = process.env.PRODUCTS_SERVICE_URL ?? "http://localhost:4002";
+import { env } from "../config/env.js";
 
 export interface ProductResponse {
   id: string;
@@ -12,7 +12,7 @@ export interface ProductResponse {
 }
 
 export async function getProductById(id: string): Promise<ProductResponse | null> {
-  const res = await fetch(`${PRODUCTS_SERVICE_URL}/products/${id}`);
+  const res = await fetch(`${env.PRODUCTS_SERVICE_URL}/products/${id}`);
 
   if (res.status === 404) {
     return null;

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
@@ -7,7 +8,7 @@ import type { prisma as PrismaClient } from "../db/prisma.js";
 import type { addItemToCart as AddItemToCart } from "./cart.service.js";
 
 // Set before any dynamic import of the cart service chain below, since
-// products.client.ts reads this once at module-evaluation time.
+// config/env.ts (via products.client.ts) reads this once at module-evaluation time.
 const TEST_PORT = 4097;
 const PRODUCTS_SERVICE_URL = `http://localhost:${TEST_PORT}`;
 process.env.PRODUCTS_SERVICE_URL = PRODUCTS_SERVICE_URL;
@@ -37,9 +38,15 @@ describe("addItemToCart (integration, real products service)", () => {
   let productId: string;
 
   beforeAll(async () => {
+    // Don't let cart's own DATABASE_URL (loaded via dotenv/config above) leak
+    // into the spawned products process — it needs to load its own .env
+    // (products_db), and dotenv never overrides an already-set variable.
+    const childEnv = { ...process.env, PORT: String(TEST_PORT) };
+    delete childEnv.DATABASE_URL;
+
     productsProcess = spawn("pnpm", ["exec", "tsx", "src/index.ts"], {
       cwd: productsDir,
-      env: { ...process.env, PORT: String(TEST_PORT) },
+      env: childEnv,
       stdio: "pipe",
     });
 

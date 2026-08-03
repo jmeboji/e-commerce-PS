@@ -1,11 +1,7 @@
 import { prisma } from "../db/prisma.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getProductById } from "../clients/products.client.js";
-
-export interface AddItemInput {
-  productId: string;
-  quantity: number;
-}
+import type { AddItemInput } from "../schemas/cart.schema.js";
 
 export async function addItemToCart(cartId: string, input: AddItemInput) {
   const product = await getProductById(input.productId);
