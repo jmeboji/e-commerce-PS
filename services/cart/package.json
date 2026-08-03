@@ -3,9 +3,24 @@
   "version": "1.0.0",
   "description": "",
   "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
-  "private": "true"
+  "private": "true",
+  "dependencies": {
+    "@prisma/client": "6.19.2",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "prisma": "6.19.2",
+    "vitest": "^4.1.10"
+  }
 }
