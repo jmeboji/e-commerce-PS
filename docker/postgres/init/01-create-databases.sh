@@ -6,6 +6,7 @@ DATABASES=(
   "users_db"
   "products_db"
   "cart_db"
+  "orders_db"
 )
 
 for db in "${DATABASES[@]}"; do

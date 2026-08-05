@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { prisma } from "../db/prisma.js";
 import * as productsClient from "../clients/products.client.js";
 import type { ProductResponse } from "../clients/products.client.js";
-import { addItemToCart } from "./cart.service.js";
+import { addItemToCart, getCartWithItems } from "./cart.service.js";
 
 vi.mock("../clients/products.client.js");
 
@@ -94,5 +94,39 @@ describe("addItemToCart", () => {
 
     const items = await prisma.cartItem.findMany({ where: { cartId, productId: product.id } });
     expect(items).toHaveLength(1);
+  });
+});
+
+describe("getCartWithItems", () => {
+  let cartId: string;
+
+  beforeEach(async () => {
+    const cart = await prisma.cart.create({ data: { userId: `user-${randomUUID()}` } });
+    cartId = cart.id;
+  });
+
+  afterEach(async () => {
+    await prisma.cart.delete({ where: { id: cartId } }).catch(() => {});
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("throws a 404 for an unknown cart", async () => {
+    await expect(getCartWithItems(randomUUID())).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("returns the cart with its items", async () => {
+    const productId = randomUUID();
+    await prisma.cartItem.create({
+      data: { cartId, productId, quantity: 3, price: "12.50" },
+    });
+
+    const cart = await getCartWithItems(cartId);
+
+    expect(cart.id).toBe(cartId);
+    expect(cart.items).toHaveLength(1);
+    expect(cart.items[0]).toMatchObject({ productId, quantity: 3 });
   });
 });

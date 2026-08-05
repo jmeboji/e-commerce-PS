@@ -56,3 +56,35 @@ describe("POST /carts/:cartId/items", () => {
     });
   });
 });
+
+describe("GET /carts/:cartId", () => {
+  let cartId: string;
+
+  beforeEach(async () => {
+    const cart = await prisma.cart.create({ data: { userId: `user-${randomUUID()}` } });
+    cartId = cart.id;
+  });
+
+  afterEach(async () => {
+    await prisma.cart.delete({ where: { id: cartId } }).catch(() => {});
+  });
+
+  it("returns the cart with its items over real HTTP", async () => {
+    const productId = randomUUID();
+    await prisma.cartItem.create({
+      data: { cartId, productId, quantity: 1, price: "5.00" },
+    });
+
+    const res = await request(app).get(`/carts/${cartId}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(cartId);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0]).toMatchObject({ productId, quantity: 1 });
+  });
+
+  it("returns 404 for an unknown cart", async () => {
+    const res = await request(app).get(`/carts/${randomUUID()}`);
+    expect(res.status).toBe(404);
+  });
+});

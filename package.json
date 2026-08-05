@@ -10,7 +10,9 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f postgres",
-    "docker:reset": "docker compose down -v"
+    "docker:reset": "docker compose down -v",
+    "infra:apply": "terraform -chdir=terraform apply",
+    "infra:destroy": "terraform -chdir=terraform destroy"
   },
   "keywords": [],
   "author": "",
