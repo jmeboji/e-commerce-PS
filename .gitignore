@@ -12,3 +12,8 @@ build/
 
 .turbo/
 coverage/
+
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
