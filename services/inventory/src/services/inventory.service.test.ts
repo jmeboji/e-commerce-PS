@@ -110,7 +110,7 @@ describe("processOrderCreated", () => {
         fakeEvent({ orderId, items: [{ productId: productMissing, quantity: 1, price: "1.00" }] }),
       ),
     ).rejects.toThrow(
-      `Cannot process order ${orderId}: no inventory record for product(s) ${productMissing}`,
+      `Cannot process order ${orderId}: insufficient stock or missing product(s) ${productMissing} (no inventory record)`,
     );
 
     const processedCount = await prisma.processedMessage.count({ where: { messageId } });
@@ -140,7 +140,7 @@ describe("processOrderCreated", () => {
         }),
       ),
     ).rejects.toThrow(
-      `Cannot process order ${orderId}: no inventory record for product(s) ${productMissing}`,
+      `Cannot process order ${orderId}: insufficient stock or missing product(s) ${productMissing} (no inventory record)`,
     );
 
     // Atomicity: the item that does exist must not have been decremented —
@@ -150,5 +150,103 @@ describe("processOrderCreated", () => {
 
     const processedCount = await prisma.processedMessage.count({ where: { messageId } });
     expect(processedCount).toBe(0);
+  });
+
+  it("throws a clear error and decrements nothing when requested quantity exceeds available stock", async () => {
+    const productId = randomUUID();
+    productIds.push(productId);
+    await prisma.inventory.create({ data: { productId, stock: 5 } });
+
+    const orderId = randomUUID();
+    const messageId = randomUUID();
+    messageIds.push(messageId);
+
+    await expect(
+      processOrderCreated(
+        messageId,
+        fakeEvent({ orderId, items: [{ productId, quantity: 10, price: "1.00" }] }),
+      ),
+    ).rejects.toThrow(
+      `Cannot process order ${orderId}: insufficient stock or missing product(s) ${productId} (have 5, need 10)`,
+    );
+
+    const inventory = await prisma.inventory.findUnique({ where: { productId } });
+    expect(inventory?.stock).toBe(5);
+
+    const processedCount = await prisma.processedMessage.count({ where: { messageId } });
+    expect(processedCount).toBe(0);
+  });
+
+  it("succeeds when requested quantity exactly equals available stock (stock lands on zero, not negative)", async () => {
+    const productId = randomUUID();
+    productIds.push(productId);
+    await prisma.inventory.create({ data: { productId, stock: 5 } });
+
+    const messageId = randomUUID();
+    messageIds.push(messageId);
+
+    await processOrderCreated(
+      messageId,
+      fakeEvent({ items: [{ productId, quantity: 5, price: "1.00" }] }),
+    );
+
+    const inventory = await prisma.inventory.findUnique({ where: { productId } });
+    expect(inventory?.stock).toBe(0);
+  });
+
+  it("aggregates quantity for the same product across multiple line items before checking stock", async () => {
+    const productId = randomUUID();
+    productIds.push(productId);
+    await prisma.inventory.create({ data: { productId, stock: 5 } });
+
+    const orderId = randomUUID();
+    const messageId = randomUUID();
+    messageIds.push(messageId);
+
+    // Two line items for the same product, 3 + 3 = 6, which exceeds the
+    // stock of 5 even though neither item alone would.
+    await expect(
+      processOrderCreated(
+        messageId,
+        fakeEvent({
+          orderId,
+          items: [
+            { productId, quantity: 3, price: "1.00" },
+            { productId, quantity: 3, price: "1.00" },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(
+      `Cannot process order ${orderId}: insufficient stock or missing product(s) ${productId} (have 5, need 6)`,
+    );
+
+    const inventory = await prisma.inventory.findUnique({ where: { productId } });
+    expect(inventory?.stock).toBe(5);
+  });
+
+  it("does not allow two concurrent calls to jointly oversell stock", async () => {
+    const productId = randomUUID();
+    productIds.push(productId);
+    await prisma.inventory.create({ data: { productId, stock: 5 } });
+
+    const messageId1 = randomUUID();
+    const messageId2 = randomUUID();
+    messageIds.push(messageId1, messageId2);
+
+    const event = fakeEvent({ items: [{ productId, quantity: 3, price: "1.00" }] });
+
+    // Both requests ask for 3 against a stock of 5 — sequentially each would
+    // succeed once, but only one should succeed if run concurrently, since
+    // together they'd oversell to -1.
+    const results = await Promise.allSettled([
+      processOrderCreated(messageId1, event),
+      processOrderCreated(messageId2, event),
+    ]);
+
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    expect(succeeded).toBe(1);
+
+    const inventory = await prisma.inventory.findUnique({ where: { productId } });
+    expect(inventory?.stock).toBe(2); // exactly one decrement of 3 applied, never both
   });
 });
