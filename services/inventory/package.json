@@ -3,9 +3,33 @@
   "version": "1.0.0",
   "description": "",
   "main": "./src/index.ts",
+  "scripts": {
+    "worker:dev": "tsx watch src/worker.ts",
+    "worker:build": "tsc -p tsconfig.json && cp -r src/generated dist/generated",
+    "worker:start": "node dist/worker.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
-  "private": "true"
+  "private": "true",
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1103.0",
+    "@prisma/client": "6.19.2",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-sns": "^3.1103.0",
+    "@types/node": "^26.1.1",
+    "prisma": "6.19.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
 }
