@@ -1,7 +1,7 @@
 import { Prisma } from "../generated/prisma/index.js";
 import { prisma } from "../db/prisma.js";
 import { HttpError } from "../middleware/error-handler.js";
-import { getCartById } from "../clients/cart.client.js";
+import { getCartById, clearCart } from "../clients/cart.client.js";
 import { publishOrderCreated } from "../clients/sns.client.js";
 import type { CreateOrderInput } from "../schemas/order.schema.js";
 
@@ -45,9 +45,16 @@ export async function createOrder(input: CreateOrderInput) {
     })),
   });
 
-  // Known gap, tracked in ECOM-13b: the source cart isn't cleared after
-  // checkout, so a second checkout against the same cart currently produces
-  // a duplicate order instead of hitting the "cart is empty" 400 above.
+  try {
+    await clearCart(input.cartId);
+  } catch (err) {
+    console.error(`Failed to clear cart ${input.cartId} after order ${order.id}:`, err);
+    // Order already committed — don't fail the request over a cart-clear
+    // failure. Known gap: if this fails, the cart isn't cleared, so a repeat
+    // checkout against it would currently succeed again rather than hitting
+    // the empty-cart 400 below.
+  }
+
   return order;
 }
 

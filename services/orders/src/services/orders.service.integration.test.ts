@@ -129,5 +129,14 @@ describe("createOrder (integration, real cart service + real LocalStack SNS/SQS)
     expect(body.userId).toBe(userId);
     expect(body.total).toBe("30");
     expect(body.items).toEqual([{ productId, quantity: 2, price: "15" }]);
+
+    // ECOM-13b: checkout must actually clear the source cart, not just
+    // publish the event — confirm against cart's own database, not orders'.
+    const remainingItems = await cartPrisma.cartItem.count({ where: { cartId } });
+    expect(remainingItems).toBe(0);
+
+    // A repeat checkout against the now-empty cart must hit the "cart is
+    // empty" 400, not silently produce a second order for the same items.
+    await expect(createOrder({ userId, cartId })).rejects.toMatchObject({ status: 400 });
   }, 15000);
 });

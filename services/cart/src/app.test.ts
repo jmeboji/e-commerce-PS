@@ -88,3 +88,34 @@ describe("GET /carts/:cartId", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("DELETE /carts/:cartId/items", () => {
+  let cartId: string;
+
+  beforeEach(async () => {
+    const cart = await prisma.cart.create({ data: { userId: `user-${randomUUID()}` } });
+    cartId = cart.id;
+  });
+
+  afterEach(async () => {
+    await prisma.cart.delete({ where: { id: cartId } }).catch(() => {});
+  });
+
+  it("clears the cart's items over real HTTP", async () => {
+    await prisma.cartItem.create({
+      data: { cartId, productId: randomUUID(), quantity: 2, price: "9.99" },
+    });
+
+    const res = await request(app).delete(`/carts/${cartId}/items`);
+    expect(res.status).toBe(204);
+
+    const followUp = await request(app).get(`/carts/${cartId}`);
+    expect(followUp.status).toBe(200);
+    expect(followUp.body.items).toEqual([]);
+  });
+
+  it("returns 404 for an unknown cart", async () => {
+    const res = await request(app).delete(`/carts/${randomUUID()}/items`);
+    expect(res.status).toBe(404);
+  });
+});
