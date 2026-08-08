@@ -11,6 +11,7 @@ vi.mock("../clients/cart.client.js");
 vi.mock("../clients/sns.client.js");
 
 const getCartByIdMock = vi.mocked(cartClient.getCartById);
+const clearCartMock = vi.mocked(cartClient.clearCart);
 const publishOrderCreatedMock = vi.mocked(snsClient.publishOrderCreated);
 
 function fakeCart(overrides: Partial<CartResponse> = {}): CartResponse {
@@ -87,6 +88,7 @@ describe("createOrder", () => {
     });
     getCartByIdMock.mockResolvedValueOnce(cart);
     publishOrderCreatedMock.mockResolvedValueOnce(undefined);
+    clearCartMock.mockResolvedValueOnce(undefined);
 
     const order = await createOrder({ userId, cartId: cart.id });
     createdOrderId = order.id;
@@ -109,6 +111,35 @@ describe("createOrder", () => {
         total: "25.25",
       }),
     );
+    expect(clearCartMock).toHaveBeenCalledWith(cart.id);
+  });
+
+  it("still returns the order when clearing the cart fails", async () => {
+    const cart = fakeCart({
+      items: [
+        {
+          id: randomUUID(),
+          cartId: randomUUID(),
+          productId: randomUUID(),
+          quantity: 1,
+          price: "3.00",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    getCartByIdMock.mockResolvedValueOnce(cart);
+    publishOrderCreatedMock.mockResolvedValueOnce(undefined);
+    clearCartMock.mockRejectedValueOnce(new Error("cart service down"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const order = await createOrder({ userId: cart.userId, cartId: cart.id });
+    createdOrderId = order.id;
+
+    expect(order.id).toBeDefined();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
   });
 });
 

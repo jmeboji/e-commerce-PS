@@ -33,3 +33,12 @@ export async function getCartById(
 
   return (await res.json()) as CartResponse;
 }
+
+export async function clearCart(cartId: string): Promise<void> {
+  const res = await fetch(`${env.CART_SERVICE_URL}/carts/${cartId}/items`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(`Cart service responded with ${res.status} while clearing cart ${cartId}`);
+  }
+}

@@ -38,3 +38,13 @@ export async function addItemToCart(cartId: string, input: AddItemInput) {
     },
   });
 }
+
+export async function clearCart(cartId: string) {
+  // Confirm the cart exists first, same 404 pattern as everywhere else —
+  // don't let deleteMany silently no-op against a cart that was never real.
+  await getCartWithItems(cartId);
+
+  // Deletes CartItem rows only, not the Cart itself — a returning user keeps
+  // a valid cartId to add new items to, instead of needing a brand new cart.
+  await prisma.cartItem.deleteMany({ where: { cartId } });
+}

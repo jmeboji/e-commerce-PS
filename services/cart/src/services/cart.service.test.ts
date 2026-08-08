@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { prisma } from "../db/prisma.js";
 import * as productsClient from "../clients/products.client.js";
 import type { ProductResponse } from "../clients/products.client.js";
-import { addItemToCart, getCartWithItems } from "./cart.service.js";
+import { addItemToCart, clearCart, getCartWithItems } from "./cart.service.js";
 
 vi.mock("../clients/products.client.js");
 
@@ -128,5 +128,44 @@ describe("getCartWithItems", () => {
     expect(cart.id).toBe(cartId);
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0]).toMatchObject({ productId, quantity: 3 });
+  });
+});
+
+describe("clearCart", () => {
+  let cartId: string;
+
+  beforeEach(async () => {
+    const cart = await prisma.cart.create({ data: { userId: `user-${randomUUID()}` } });
+    cartId = cart.id;
+  });
+
+  afterEach(async () => {
+    await prisma.cart.delete({ where: { id: cartId } }).catch(() => {});
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("throws a 404 for an unknown cart", async () => {
+    await expect(clearCart(randomUUID())).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("deletes the cart's items but leaves the cart itself intact", async () => {
+    await prisma.cartItem.create({
+      data: { cartId, productId: randomUUID(), quantity: 2, price: "9.99" },
+    });
+    await prisma.cartItem.create({
+      data: { cartId, productId: randomUUID(), quantity: 1, price: "19.99" },
+    });
+
+    await clearCart(cartId);
+
+    const items = await prisma.cartItem.findMany({ where: { cartId } });
+    expect(items).toHaveLength(0);
+
+    const cart = await prisma.cart.findUnique({ where: { id: cartId } });
+    expect(cart).not.toBeNull();
+    expect(cart?.id).toBe(cartId);
   });
 });

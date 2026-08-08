@@ -22,3 +22,13 @@ export async function addItem(req: Request, res: Response, next: NextFunction) {
     next(err);
   }
 }
+
+export async function clear(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { cartId } = cartIdParamSchema.parse(req.params);
+    await cartService.clearCart(cartId);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
