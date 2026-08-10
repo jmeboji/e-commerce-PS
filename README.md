@@ -58,7 +58,9 @@ pnpm dev               # start with live reload
 | Script             | What it does                                      |
 | ------------------ | -------------------------------------------------- |
 | `pnpm build`        | Runs `build` in every workspace package that has one |
-| `pnpm test`         | Runs `test` in every workspace package that has one  |
+| `pnpm test`         | Runs `test:unit` in every service, in parallel — see [Running tests](#running-tests) |
+| `pnpm test:integration` | Runs `test:integration` in every service, sequentially — see [Running tests](#running-tests) |
+| `pnpm test:all`     | Runs `pnpm test` then `pnpm test:integration` |
 | `pnpm typecheck`    | Runs `typecheck` in every workspace package that has one |
 | `pnpm docker:up`    | Starts local infra (Postgres + LocalStack) in the background |
 | `pnpm docker:down`  | Stops local infra                                   |
@@ -68,6 +70,13 @@ pnpm dev               # start with live reload
 | `pnpm infra:destroy`| Tears down the SQS/SNS topology (`terraform destroy`) |
 
 Each app/service/package that implements a script (build/test/typecheck/dev) defines it in its own `package.json`; `pnpm -r` skips workspace members that don't define it.
+
+## Running tests
+
+- `pnpm test` (root) — runs every service's **unit tests** in parallel. Fast, safe to run anytime.
+- `pnpm test:integration` (root) — runs every service's **integration tests sequentially**, not in parallel. Several integration tests (`orders`, `inventory`) interact with the same real LocalStack SQS queue; running them concurrently can cause one test to consume or purge a message another test is asserting on, producing an intermittent false failure that is not a real product bug (see ECOM-14c).
+- `pnpm test:all` (root) — runs both, in the correct order.
+- Within a single service (e.g. `cd services/orders && pnpm test`), unit and integration tests always run together safely — the collision only happens *across* services sharing infra, run in parallel.
 
 ## Local messaging (LocalStack)
 
