@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ProcessedMessage {
+  id          String   @id @default(uuid())
+  messageId   String   @unique
+  processedAt DateTime @default(now())
+}
+
+model NotificationLog {
+  id        String   @id @default(uuid())
+  orderId   String
+  userId    String
+  sentAt    DateTime @default(now())
+}
