@@ -15,8 +15,8 @@ services/        backend microservices
   products/       product catalog — implemented
   cart/           shopping cart, calls products over HTTP — implemented
   orders/         checkout: calls cart over HTTP, publishes OrderCreated via SNS — implemented
-  inventory/      (scaffolded, not yet implemented)
-  notifications/  (scaffolded, not yet implemented)
+  inventory/      consumes OrderCreated over SQS, decrements stock — implemented
+  notifications/  consumes OrderCreated over SQS, records order receipts — implemented
 
 packages/         shared code
   ui/             shared UI components
@@ -85,12 +85,12 @@ LocalStack emulates SQS/SNS on `http://localhost:4566`. Resources are provisione
 | Resource | Name | Purpose |
 | --- | --- | --- |
 | SNS Topic | `local-orders-order-placed-topic` | Published to by `orders` when a checkout completes |
-| SQS Queue | `local-inventory-order-placed-queue` | For Inventory Service to deduct stock (service not yet implemented) |
+| SQS Queue | `local-inventory-order-placed-queue` | Consumed by `inventory` to deduct stock |
 | SQS Queue (DLQ) | `local-inventory-order-placed-dlq` | Failed inventory processing jobs (after 3 receives) |
-| SQS Queue | `local-email-order-placed-queue` | For Notification Service to send a buyer receipt (service not yet implemented) |
-| SQS Queue (DLQ) | `local-email-order-placed-dlq` | Failed email sends (after 3 receives) |
+| SQS Queue | `local-email-order-placed-queue` | Consumed by `notifications` to record order receipts |
+| SQS Queue (DLQ) | `local-email-order-placed-dlq` | Failed notification processing jobs (after 3 receives) |
 
-The topic fans out to both queues with raw message delivery enabled (consumers get the plain event JSON, not an SNS-wrapped envelope). `orders` is currently the only real publisher; nothing in this repo consumes yet, so messages just sit in the queues until `inventory`/`notifications` are built.
+The topic fans out to both queues with raw message delivery enabled (consumers get the plain event JSON, not an SNS-wrapped envelope). `orders` publishes; `inventory` and `notifications` each run a worker (`pnpm worker:dev`) that long-polls its own queue.
 
 **`OrderCreated` payload** (published by `services/orders/src/clients/sns.client.ts`):
 
