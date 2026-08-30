@@ -17,6 +17,7 @@ dependencies = [
   "sentence-transformers==5.7.0",
   "anthropic==0.122.0",
   "httpx==0.28.1",
+  "boto3==1.43.76",
   # torch has no macOS x86_64 wheel past 2.2.2, which predates NumPy 2.0's
   # C-ABI changes and silently breaks against it (torch's NumPy integration
   # fails to initialize, cascading into NameError deep inside transformers).

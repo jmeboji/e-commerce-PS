@@ -56,9 +56,8 @@ async def search(query: str, top_k: int = 5) -> SearchResult:
     return SearchResult(answer=answer, products=matches)
 
 
-# Used by scripts/ingest_products.py (manual ingestion) and directly by
-# tests — there's still no automatic pipeline (e.g. triggered off a
-# ProductCreated event), just the one-off script.
+# Used by scripts/ingest_products.py (manual ingestion) and the
+# product_changed consumer (created/updated events) for real-time upserts.
 #
 # INSERT ... ON CONFLICT DO UPDATE, not a SELECT-then-branch: the earlier
 # version checked for an existing row, then inserted or mutated based on
@@ -82,3 +81,11 @@ def upsert_product_embedding(db: Session, product_id: str, text: str) -> Product
     db.commit()
     db.refresh(row)
     return row
+
+
+# Used by the product_changed consumer on a deleted event. A no-op if no
+# embedding was ever ingested for this product_id — deleting a product that
+# was never embedded isn't an error.
+def delete_product_embedding(db: Session, product_id: str) -> None:
+    db.query(ProductEmbedding).filter(ProductEmbedding.product_id == product_id).delete()
+    db.commit()

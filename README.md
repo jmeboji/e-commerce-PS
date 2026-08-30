@@ -17,6 +17,7 @@ services/        backend microservices
   orders/         checkout: calls cart over HTTP, publishes OrderCreated via SNS — implemented
   inventory/      consumes OrderCreated over SQS, decrements stock — implemented
   notifications/  consumes OrderCreated over SQS, records order receipts — implemented
+  recommendations/ semantic product search (Python/FastAPI + pgvector), consumes ProductChanged over SQS — implemented
 
 packages/         shared code
   ui/             shared UI components
@@ -34,6 +35,7 @@ docs/             architecture notes
 - pnpm `10.12.1` (see `packageManager` in [package.json](package.json))
 - Docker, for local Postgres and LocalStack
 - Terraform `>= 1.5`, for provisioning the local SQS/SNS topology (`brew install hashicorp/tap/terraform` — plain `brew install terraform` no longer works since HashiCorp pulled it from `homebrew-core`)
+- Python `>=3.11`, for `recommendations` only — every other service is Node. **On Intel Macs specifically, use Python 3.12, not 3.13**: `torch` (a `sentence-transformers` dependency) has no macOS x86_64 wheel past version 2.2.2, which doesn't support 3.13. `brew install python@3.12` if you don't already have it. See `services/recommendations/pyproject.toml` for the exact dependency versions this pins to work around it (also affects `numpy`/`scipy`/`transformers`, all pinned narrowly to that platform).
 
 ## Setup
 
@@ -51,6 +53,18 @@ cd services/users
 cp .env.example .env
 pnpm prisma:migrate    # create tables
 pnpm dev               # start with live reload
+```
+
+`recommendations` is Python, not Node, so its setup is different — no `pnpm`, no Prisma migrations (tables are created via SQLAlchemy `create_all()` at startup, by either `main.py` or `worker.py`, whichever runs first):
+
+```bash
+cd services/recommendations
+python3.12 -m venv .venv        # 3.12, not 3.13 — see Requirements above
+source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env
+uvicorn src.main:app --reload --port 4007   # the search HTTP API
+python -m src.worker                        # separately: the ProductChanged consumer
 ```
 
 ## Root scripts
@@ -89,8 +103,13 @@ LocalStack emulates SQS/SNS on `http://localhost:4566`. Resources are provisione
 | SQS Queue (DLQ) | `local-inventory-order-placed-dlq` | Failed inventory processing jobs (after 3 receives) |
 | SQS Queue | `local-email-order-placed-queue` | Consumed by `notifications` to record order receipts |
 | SQS Queue (DLQ) | `local-email-order-placed-dlq` | Failed notification processing jobs (after 3 receives) |
+| SNS Topic | `local-products-product-changed-topic` | Published to by `products` on create/update/delete |
+| SQS Queue | `local-recommendations-product-changed-queue` | Consumed by `recommendations` to keep embeddings in sync |
+| SQS Queue (DLQ) | `local-recommendations-product-changed-dlq` | Failed embedding upserts/deletes (after 3 receives) |
 
-The topic fans out to both queues with raw message delivery enabled (consumers get the plain event JSON, not an SNS-wrapped envelope). `orders` publishes; `inventory` and `notifications` each run a worker (`pnpm worker:dev`) that long-polls its own queue.
+`local-orders-order-placed-topic` fans out to both the inventory and email queues with raw message delivery enabled (consumers get the plain event JSON, not an SNS-wrapped envelope). `orders` publishes; `inventory` and `notifications` each run a worker (`pnpm worker:dev`) that long-polls its own queue.
+
+`local-products-product-changed-topic` fans out to a single queue the same way. `products` publishes on every create/update/delete; `recommendations` runs a Python consumer (`python -m src.worker` — this service isn't Node, so no `pnpm worker:dev`) that keeps `product_embeddings` in sync in real time. `scripts/ingest_products.py` is a separate backfill/recovery tool for seeding or repairing the embedding index, not part of this real-time flow — see its own docstring.
 
 **`OrderCreated` payload** (published by `services/orders/src/clients/sns.client.ts`):
 
@@ -103,7 +122,25 @@ The topic fans out to both queues with raw message delivery enabled (consumers g
 }
 ```
 
-To connect from a service, point the AWS SDK at LocalStack with dummy credentials — same pattern for both clients:
+**`ProductChanged` payload** (published by `services/products/src/clients/sns.client.ts`) — a discriminated union on `eventType`; `name`/`description` only appear on `created`/`updated` (that's what gets embedded), since removing an embedding only needs `productId`:
+
+```json
+// created / updated
+{
+  "eventType": "created",
+  "productId": "uuid",
+  "name": "string",
+  "description": "string"
+}
+
+// deleted
+{
+  "eventType": "deleted",
+  "productId": "uuid"
+}
+```
+
+To connect from a service, point the AWS SDK at LocalStack with dummy credentials — same pattern across all the Node clients:
 
 ```ts
 new SNSClient({
@@ -111,6 +148,18 @@ new SNSClient({
   region: "us-east-1",
   credentials: { accessKeyId: "test", secretAccessKey: "test" },
 });
+```
+
+`recommendations` is Python, so it uses `boto3` instead of the AWS SDK for JS:
+
+```python
+boto3.client(
+    "sqs",
+    endpoint_url="http://localhost:4566",
+    region_name="us-east-1",
+    aws_access_key_id="test",
+    aws_secret_access_key="test",
+)
 ```
 
 To inspect resources manually: `docker exec e-commerce-localstack awslocal sqs list-queues --region us-east-1` (swap `sqs` for `sns` as needed).

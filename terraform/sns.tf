@@ -17,3 +17,15 @@ resource "aws_sns_topic_subscription" "email" {
 
   raw_message_delivery = true
 }
+
+resource "aws_sns_topic" "product_changed" {
+  name = "local-products-product-changed-topic"
+}
+
+resource "aws_sns_topic_subscription" "recommendations" {
+  topic_arn = aws_sns_topic.product_changed.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.recommendations_queue.arn
+
+  raw_message_delivery = true
+}
