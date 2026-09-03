@@ -1,5 +1,11 @@
-"""One-off manual ingestion: fetch every product from the products service,
-embed name + description, and upsert into product_embeddings.
+"""Backfill/recovery tool, not the primary ingestion path anymore — that's
+now the product_changed consumer (worker.py), which updates embeddings in
+real time as products are created/updated/deleted. Use this script to seed
+product_embeddings from an existing catalog (e.g. first deploy), or to
+recover from drift if the consumer was down or a message hit the DLQ.
+
+Fetches every product from the products service, embeds name +
+description, and upserts into product_embeddings.
 
 Run from the service root: python scripts/ingest_products.py
 """

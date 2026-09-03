@@ -27,3 +27,16 @@ resource "aws_sqs_queue" "email_queue" {
     maxReceiveCount     = local.max_receive_count
   })
 }
+
+resource "aws_sqs_queue" "recommendations_dlq" {
+  name = "local-recommendations-product-changed-dlq"
+}
+
+resource "aws_sqs_queue" "recommendations_queue" {
+  name = "local-recommendations-product-changed-queue"
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.recommendations_dlq.arn
+    maxReceiveCount     = local.max_receive_count
+  })
+}

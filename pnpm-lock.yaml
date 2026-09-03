@@ -188,6 +188,9 @@ importers:
 
   services/products:
     dependencies:
+      '@aws-sdk/client-sns':
+        specifier: ^3.1103.0
+        version: 3.1103.0
       '@prisma/client':
         specifier: 6.19.2
         version: 6.19.2(prisma@6.19.2(typescript@7.0.2))(typescript@7.0.2)
@@ -201,6 +204,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@aws-sdk/client-sqs':
+        specifier: ^3.1103.0
+        version: 3.1103.0
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
