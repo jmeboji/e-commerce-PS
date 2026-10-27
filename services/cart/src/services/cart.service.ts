@@ -48,3 +48,10 @@ export async function clearCart(cartId: string) {
   // a valid cartId to add new items to, instead of needing a brand new cart.
   await prisma.cartItem.deleteMany({ where: { cartId } });
 }
+
+export async function createCart(userId: string) {
+  return prisma.cart.create({
+    data: { userId },
+    include: { items: true },
+  });
+}

@@ -10,3 +10,9 @@ export const cartIdParamSchema = z.object({
 });
 
 export type AddItemInput = z.infer<typeof addItemSchema>;
+
+export const createCartSchema = z.object({
+  userId: z.string().min(1),
+});
+
+export type CreateCartInput = z.infer<typeof createCartSchema>;

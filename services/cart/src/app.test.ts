@@ -13,6 +13,24 @@ const getProductByIdMock = vi.mocked(productsClient.getProductById);
 
 const app = createApp();
 
+describe("POST /carts", () => {
+  it("creates a new cart and returns it", async () => {
+    const userId = `guest-${randomUUID()}`;
+    const res = await request(app).post("/carts").send({ userId });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ userId, items: [] });
+    expect(res.body.id).toEqual(expect.any(String));
+
+    await prisma.cart.delete({ where: { id: res.body.id } }).catch(() => {});
+  });
+
+  it("rejects a missing userId", async () => {
+    const res = await request(app).post("/carts").send({});
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("POST /carts/:cartId/items", () => {
   let cartId: string;
 

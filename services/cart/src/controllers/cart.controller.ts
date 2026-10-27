@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import * as cartService from "../services/cart.service.js";
-import { addItemSchema, cartIdParamSchema } from "../schemas/cart.schema.js";
+import { addItemSchema, cartIdParamSchema, createCartSchema } from "../schemas/cart.schema.js";
 
 export async function show(req: Request, res: Response, next: NextFunction) {
   try {
@@ -28,6 +28,16 @@ export async function clear(req: Request, res: Response, next: NextFunction) {
     const { cartId } = cartIdParamSchema.parse(req.params);
     await cartService.clearCart(cartId);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function create(req: Request, res: Response, next: NextFunction) {
+  try {
+    const input = createCartSchema.parse(req.body);
+    const cart = await cartService.createCart(input.userId);
+    res.status(201).json(cart);
   } catch (err) {
     next(err);
   }
