@@ -3,6 +3,7 @@ import { getProductById } from "@/lib/api/products";
 import { getCurrentCart } from "@/lib/cart-session";
 import { formatPrice } from "@/lib/format";
 import { fromCents, toCents } from "@/lib/money";
+import { CheckoutButton } from "@/components/checkout-button";
 import { clearCurrentCart } from "./actions";
 
 export default async function CartPage() {
@@ -64,6 +65,7 @@ export default async function CartPage() {
         </form>
         <p className="text-lg font-semibold">Total {formatPrice(fromCents(totalCents))}</p>
       </div>
+      <CheckoutButton />
     </div>
   );
 }

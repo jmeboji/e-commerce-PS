@@ -1,7 +1,9 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { addItemToCart, clearCart } from "@/lib/api/cart";
+import { createOrder } from "@/lib/api/orders";
 import { getCurrentCart, getOrCreateCart } from "@/lib/cart-session";
 
 export type AddToCartState = { status: "idle" | "added" | "error"; message: string };
@@ -37,4 +39,30 @@ export async function clearCurrentCart(): Promise<void> {
   if (!cart) return;
   await clearCart(cart.id);
   refresh();
+}
+
+export type CheckoutState = { message: string };
+
+export async function placeOrder(): Promise<CheckoutState> {
+  const cart = await getCurrentCart();
+  if (!cart || cart.items.length === 0) {
+    return { message: "Your cart is empty." };
+  }
+
+  let orderId: string;
+  try {
+    // userId comes from the cart, not the request, so an order is always
+    // placed for the cart's own guest.
+    const order = await createOrder(cart.userId, cart.id);
+    orderId = order.id;
+  } catch (err) {
+    console.error(`placeOrder failed for cart ${cart.id}:`, err);
+    return { message: "Couldn't place your order. Please try again." };
+  }
+
+  // orders cleared the cart, but the header's cart count lives in the root
+  // layout, which a redirect alone doesn't re-render. Invalidate it first.
+  revalidatePath("/", "layout");
+  // Outside the try: redirect() works by throwing.
+  redirect(`/orders/${orderId}`);
 }

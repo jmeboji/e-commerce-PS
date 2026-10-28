@@ -31,7 +31,8 @@ export async function createOrder(userId: string, cartId: string): Promise<Order
 
 export async function getOrderById(id: string): Promise<OrderResponse | null> {
   const res = await fetch(`${env.ORDERS_URL}/orders/${id}`, { cache: "no-store" });
-  if (res.status === 404) return null;
+  // 400 is orders rejecting a malformed (non-UUID) id; same answer as 404.
+  if (res.status === 404 || res.status === 400) return null;
   if (!res.ok) throw new Error(`Orders service responded with ${res.status}`);
   return (await res.json()) as OrderResponse;
 }

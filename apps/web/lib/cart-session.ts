@@ -26,6 +26,10 @@ export async function getCurrentCart(): Promise<CartResponse | null> {
   return getCartById(cartId);
 }
 
+export async function getGuestId(): Promise<string | null> {
+  return (await cookies()).get(GUEST_ID_COOKIE)?.value ?? null;
+}
+
 // Server Actions only. Carts are created lazily, on the first add, so
 // visitors who only browse don't each leave an empty cart row behind.
 export async function getOrCreateCart(): Promise<CartResponse> {
