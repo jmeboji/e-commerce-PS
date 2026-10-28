@@ -31,7 +31,9 @@ export async function getProductById(
   const res = await fetch(`${env.PRODUCTS_URL}/products/${id}`, {
     cache: "no-store",
   });
-  if (res.status === 404) {
+  // 400 is products rejecting a malformed (non-UUID) id. No product can
+  // have that id, so it's the same answer as 404 for a caller.
+  if (res.status === 404 || res.status === 400) {
     return null;
   }
   if (!res.ok) {
