@@ -25,6 +25,36 @@ describe("POST /carts", () => {
     await prisma.cart.delete({ where: { id: res.body.id } }).catch(() => {});
   });
 
+  it("returns the existing cart, with its items, when the user already has one", async () => {
+    const userId = `guest-${randomUUID()}`;
+    const first = await request(app).post("/carts").send({ userId });
+    const productId = randomUUID();
+    await prisma.cartItem.create({
+      data: { cartId: first.body.id, productId, quantity: 2, price: "9.99" },
+    });
+
+    const second = await request(app).post("/carts").send({ userId });
+
+    expect(second.status).toBe(200);
+    expect(second.body.id).toBe(first.body.id);
+    expect(second.body.items).toEqual([expect.objectContaining({ productId, quantity: 2 })]);
+
+    await prisma.cart.delete({ where: { id: first.body.id } }).catch(() => {});
+  });
+
+  it("creates exactly one cart for concurrent requests from the same user", async () => {
+    const userId = `guest-${randomUUID()}`;
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () => request(app).post("/carts").send({ userId })),
+    );
+
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 200, 200, 200, 201]);
+    expect(new Set(responses.map((r) => r.body.id)).size).toBe(1);
+    expect(await prisma.cart.count({ where: { userId } })).toBe(1);
+
+    await prisma.cart.delete({ where: { id: responses[0].body.id } }).catch(() => {});
+  });
+
   it("rejects a missing userId", async () => {
     const res = await request(app).post("/carts").send({});
     expect(res.status).toBe(400);

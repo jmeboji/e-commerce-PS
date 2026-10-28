@@ -36,8 +36,8 @@ export async function clear(req: Request, res: Response, next: NextFunction) {
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
     const input = createCartSchema.parse(req.body);
-    const cart = await cartService.createCart(input.userId);
-    res.status(201).json(cart);
+    const { cart, created } = await cartService.createCart(input.userId);
+    res.status(created ? 201 : 200).json(cart);
   } catch (err) {
     next(err);
   }
