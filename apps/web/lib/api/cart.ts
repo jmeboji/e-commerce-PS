@@ -30,7 +30,9 @@ export async function createCart(userId: string): Promise<CartResponse> {
 
 export async function getCartById(cartId: string): Promise<CartResponse | null> {
   const res = await fetch(`${env.CART_URL}/carts/${cartId}`, { cache: "no-store" });
-  if (res.status === 404) return null;
+  // 400 is cart rejecting a malformed (non-UUID) id, e.g. a tampered
+  // cookie. No cart can have that id, so it's the same answer as 404.
+  if (res.status === 404 || res.status === 400) return null;
   if (!res.ok) throw new Error(`Cart service responded with ${res.status}`);
   return (await res.json()) as CartResponse;
 }

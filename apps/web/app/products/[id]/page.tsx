@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCartForm } from "@/components/add-to-cart-form";
 import { getProductById } from "@/lib/api/products";
 import { formatPrice } from "@/lib/format";
 
@@ -22,6 +23,7 @@ export default async function ProductPage(props: PageProps<"/products/[id]">) {
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"} · SKU {product.sku}
       </p>
+      <AddToCartForm productId={product.id} inStock={product.stock > 0} />
     </article>
   );
 }
