@@ -6,3 +6,4 @@ export const cartRouter = Router();
 cartRouter.get("/:cartId", cartController.show);
 cartRouter.post("/:cartId/items", cartController.addItem);
 cartRouter.delete("/:cartId/items", cartController.clear);
+cartRouter.post("/", cartController.create);
