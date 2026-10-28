@@ -36,6 +36,7 @@ docs/             architecture notes
 - Docker, for local Postgres and LocalStack
 - Terraform `>= 1.5`, for provisioning the local SQS/SNS topology (`brew install hashicorp/tap/terraform` — plain `brew install terraform` no longer works since HashiCorp pulled it from `homebrew-core`)
 - Python `>=3.11`, for `recommendations` only — every other service is Node. **On Intel Macs specifically, use Python 3.12, not 3.13**: `torch` (a `sentence-transformers` dependency) has no macOS x86_64 wheel past version 2.2.2, which doesn't support 3.13. `brew install python@3.12` if you don't already have it. See `services/recommendations/pyproject.toml` for the exact dependency versions this pins to work around it (also affects `numpy`/`scipy`/`transformers`, all pinned narrowly to that platform).
+- **`apps/web` is pinned to TypeScript `^6`, not `^7.0.2` like every other package.** `typescript-eslint` has no support for TypeScript 7 yet (tracked upstream: [typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940), blocked on TypeScript exposing a stable API for the new Go-based compiler). `apps/web` is the only package that runs ESLint's type-aware rules against its own source in this repo, so it's the only one affected. Revisit this pin once typescript-eslint adds support.
 
 ## Setup
 
