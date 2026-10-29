@@ -1,3 +1,4 @@
+import { Prisma } from "../generated/prisma/index.js";
 import { prisma } from "../db/prisma.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getProductById } from "../clients/products.client.js";
@@ -49,9 +50,26 @@ export async function clearCart(cartId: string) {
   await prisma.cartItem.deleteMany({ where: { cartId } });
 }
 
+// Get-or-create: userId is @unique on Cart (one cart per user), so a second
+// POST for the same user returns that user's existing cart instead of
+// failing. Create-then-catch rather than findUnique-then-create, so two
+// concurrent calls can't both pass a "no cart yet" check and race — the
+// unique index decides, same as upsert_product_embedding's ON CONFLICT.
 export async function createCart(userId: string) {
-  return prisma.cart.create({
-    data: { userId },
-    include: { items: true },
-  });
+  try {
+    const cart = await prisma.cart.create({
+      data: { userId },
+      include: { items: true },
+    });
+    return { cart, created: true };
+  } catch (err) {
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2002") {
+      throw err;
+    }
+    const cart = await prisma.cart.findUniqueOrThrow({
+      where: { userId },
+      include: { items: true },
+    });
+    return { cart, created: false };
+  }
 }
