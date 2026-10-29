@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartLink } from "@/components/cart-link";
+import { SearchBox } from "@/components/search-box";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,10 +28,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         <header className="border-b border-black/10 dark:border-white/15">
-          <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+          <nav className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4">
             <Link href="/" className="text-lg font-semibold">
               E-commerce PS
             </Link>
+            <SearchBox />
             <CartLink />
           </nav>
         </header>
